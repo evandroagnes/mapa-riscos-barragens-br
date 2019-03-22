@@ -1,0 +1,175 @@
+---
+title: "Mapa de Risco das Barragens no Brasil"
+output: html_notebook
+---
+
+```{r}
+#install.packages("sp")
+#install.packages("stringr")
+#install.packages("dplyr")
+#install.packages("leaflet")
+#install.packages("htmltools")
+
+library(sp)
+library(stringr)
+library(dplyr)
+library(leaflet)
+library(ggplot2)
+library(htmltools)
+
+```
+
+```{r}
+barragens <- read.csv("data/database_versao_00_fonteANM_23_01_2019.csv", stringsAsFactors = FALSE)
+brumadino <- read.csv("data/IBGE_3109006_Censo2017_Brumadinho_domicilios.csv", stringsAsFactors = FALSE)
+mario_campos <- read.csv("data/IBGE_3140159_Censo2017_Mariocampos_domicilios.csv", stringsAsFactors = FALSE)
+pompeu <- read.csv("data/IBGE_3152006_Censo2017_Pompeu_domicilios.csv", stringsAsFactors = FALSE)
+sao_joaquim_das_bicas <- read.csv("data/IBGE_3162922_Censo2017_Sao_JoaquimdasBicas_domicilios.csv", stringsAsFactors = FALSE)
+```
+
+```{r}
+barragens$LATITUDE <- str_replace(barragens$LATITUDE, ",", ".")
+barragens$LATITUDE <- str_replace(barragens$LATITUDE, "-", "")
+barragens$LATITUDE <- ifelse(barragens$POSICIONAMENTO == "Sul do Equador", paste0(barragens$LATITUDE, "S"), paste0(barragens$LATITUDE, "N"))
+barragens$LAT <- as.numeric(char2dms(barragens$LATITUDE, chd = "º", chm = "'", chs = "\""))
+
+barragens$LONGITUDE <- str_replace(barragens$LONGITUDE, ",", ".")
+barragens$LONGITUDE <- str_replace(barragens$LONGITUDE, "-", "")
+barragens$LONGITUDE <- paste0(barragens$LONGITUDE, "W")
+barragens$LNG <- as.numeric(char2dms(barragens$LONGITUDE, chd = "º", chm = "'", chs = "\""))
+
+barragens$UF <- as.factor(barragens$UF)
+barragens$MUNICIPIO <- as.factor(barragens$MUNICIPIO)
+barragens$POSICIONAMENTO <- as.factor(barragens$POSICIONAMENTO)
+barragens$ALTURA_ATUAL_metros <- as.numeric(barragens$ALTURA_ATUAL_metros)
+barragens$VOLUME_ATUAL_m3 <- as.numeric(barragens$VOLUME_ATUAL_m3)
+barragens$CATEGORIA_DE_RISCO <- ifelse(barragens$CATEGORIA_DE_RISCO == "", "Sem classificação", barragens$CATEGORIA_DE_RISCO)
+barragens$CATEGORIA_DE_RISCO <- as.factor(barragens$CATEGORIA_DE_RISCO)
+barragens$DANO_POTENCIAL_ASSOCIADO <- ifelse(barragens$DANO_POTENCIAL_ASSOCIADO == "", "Sem classificação", barragens$DANO_POTENCIAL_ASSOCIADO)
+barragens$DANO_POTENCIAL_ASSOCIADO <- as.factor(barragens$DANO_POTENCIAL_ASSOCIADO)
+barragens$CLASSE <- as.factor(barragens$CLASSE)
+barragens$MINERIO_PRINCIPAL <- as.factor(barragens$MINERIO_PRINCIPAL)
+barragens$INSERIDA_NA_PNSB <- ifelse(barragens$INSERIDA_NA_PNSB == "Sim", TRUE, FALSE)
+```
+
+```{r}
+summary(barragens)
+str(barragens)
+head(barragens, n = 15)
+
+filter(barragens, MUNICIPIO == "BRUMADINHO")
+
+barragens %>%
+  group_by(CATEGORIA_DE_RISCO) %>%
+  count()
+
+barragens %>%
+  group_by(DANO_POTENCIAL_ASSOCIADO) %>%
+  count()
+
+barragens %>%
+  group_by(DANO_POTENCIAL_ASSOCIADO) %>%
+  summarize(total = n(),
+            volume_total_m3 = sum(VOLUME_ATUAL_m3, na.rm = TRUE)) %>%
+  arrange(desc(total))
+
+barragens %>%
+  group_by(CATEGORIA_DE_RISCO) %>%
+  summarize(total = n(),
+            volume_total_m3 = sum(VOLUME_ATUAL_m3, na.rm = TRUE)) %>%
+  arrange(desc(total))
+
+table(barragens$CATEGORIA_DE_RISCO, barragens$DANO_POTENCIAL_ASSOCIADO)
+
+minerio_principal <- barragens %>%
+  group_by(MINERIO_PRINCIPAL) %>%
+  summarize(total = n(),
+            volume_total_m3 = sum(VOLUME_ATUAL_m3, na.rm = TRUE)) %>%
+  arrange(desc(total))
+
+minerio_principal
+
+ggplot(data = minerio_principal, aes(x = reorder(MINERIO_PRINCIPAL, -total), y = total)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+
+ggplot(data = minerio_principal, aes(x = reorder(MINERIO_PRINCIPAL, -volume_total_m3), y = volume_total_m3)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+
+ggplot(data = barragens, aes(log(VOLUME_ATUAL_m3))) +
+  geom_histogram()
+
+ggplot(data = barragens, aes(ALTURA_ATUAL_metros)) +
+  geom_histogram()
+
+ggplot(data = barragens, aes(DANO_POTENCIAL_ASSOCIADO, VOLUME_ATUAL_m3)) +
+  geom_point(color = "steelblue", size = 4, alpha = 1/3)
+
+ggplot(data = barragens, aes(DANO_POTENCIAL_ASSOCIADO, ALTURA_ATUAL_metros)) +
+  geom_point(color = "steelblue", size = 4, alpha = 1/3)
+
+ggplot(data = barragens, aes(CATEGORIA_DE_RISCO, VOLUME_ATUAL_m3)) +
+  geom_point(color = "steelblue", size = 4, alpha = 1/3)
+
+ggplot(data = barragens, aes(CATEGORIA_DE_RISCO, ALTURA_ATUAL_metros)) +
+  geom_point(color = "steelblue", size = 4, alpha = 1/3)
+```
+
+```{r}
+pal <- colorFactor(palette = c("red", "yellow", "green", "gray"), 
+                   levels = c("Alta", "Média", "Baixa", "Sem classificação"))
+
+leaflet(barragens) %>%
+  addProviderTiles("Esri") %>%
+  addCircleMarkers(lng = ~LNG,
+                   lat = ~LAT,
+                   radius = ~ALTURA_ATUAL_metros/10,
+                   color = ~pal(CATEGORIA_DE_RISCO),
+                   label = ~paste0(NOME_BARRAGEM_MINERACAO, " (", MUNICIPIO, ")")) %>%
+  addLegend(pal = pal,
+            values = c("Alta", "Média", "Baixa", "Sem classificação"),
+            opacity = .5,
+            title = "Categoria de Risco",
+            position = "topleft")
+
+leaflet(barragens) %>%
+  addProviderTiles("Esri") %>%
+  addCircleMarkers(lng = ~LNG,
+                   lat = ~LAT,
+                   radius = ~ALTURA_ATUAL_metros/10,
+                   color = ~pal(DANO_POTENCIAL_ASSOCIADO),
+                   popup = ~MUNICIPIO) %>%
+  addLegend(pal = pal,
+            values = c("Alta", "Média", "Baixa", "Sem classificação"),
+            opacity = .5,
+            title = "Dano Potencial Associado",
+            position = "topleft")
+
+
+mapa_riscos <- leaflet() %>%
+  addProviderTiles("Esri") %>%
+  addCircleMarkers(data = barragens,
+                   lng = ~LNG,
+                   lat = ~LAT,
+                   radius = ~ALTURA_ATUAL_metros/10,
+                   color = ~pal(DANO_POTENCIAL_ASSOCIADO),
+                   label = ~htmlEscape(paste0(NOME_BARRAGEM_MINERACAO, " (", MUNICIPIO, ")")),
+                   group = "Altura") %>%
+  addCircleMarkers(data = barragens,
+                   lng = ~LNG,
+                   lat = ~LAT,
+                   radius = ~VOLUME_ATUAL_m3/10,
+                   color = ~pal(DANO_POTENCIAL_ASSOCIADO),
+                   label = ~htmlEscape(paste0(NOME_BARRAGEM_MINERACAO, " (", MUNICIPIO, ")")),
+                   group = "Volume") %>%
+  add
+  addLegend(pal = pal,
+            values = c("Alta", "Média", "Baixa", "Sem classificação"),
+            opacity = .5,
+            title = "Categoria de Risco",
+            position = "topleft") %>%
+  addLayersControl(baseGroups = c("Altura", "Volume"))
+
+mapa_riscos
+```
