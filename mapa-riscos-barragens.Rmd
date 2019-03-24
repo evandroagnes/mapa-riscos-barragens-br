@@ -3,6 +3,8 @@ title: "Mapa de Risco das Barragens no Brasil"
 output: html_notebook
 ---
 
+Carregando pacoted necessários:
+
 ```{r}
 #install.packages("sp")
 #install.packages("stringr")
@@ -19,6 +21,8 @@ library(htmltools)
 
 ```
 
+Obtendo dados:
+
 ```{r}
 barragens <- read.csv("data/database_versao_00_fonteANM_23_01_2019.csv", stringsAsFactors = FALSE)
 brumadino <- read.csv("data/IBGE_3109006_Censo2017_Brumadinho_domicilios.csv", stringsAsFactors = FALSE)
@@ -26,6 +30,8 @@ mario_campos <- read.csv("data/IBGE_3140159_Censo2017_Mariocampos_domicilios.csv
 pompeu <- read.csv("data/IBGE_3152006_Censo2017_Pompeu_domicilios.csv", stringsAsFactors = FALSE)
 sao_joaquim_das_bicas <- read.csv("data/IBGE_3162922_Censo2017_Sao_JoaquimdasBicas_domicilios.csv", stringsAsFactors = FALSE)
 ```
+
+Transformando os tipos de dados:
 
 ```{r}
 barragens$LATITUDE <- str_replace(barragens$LATITUDE, ",", ".")
@@ -51,6 +57,8 @@ barragens$CLASSE <- as.factor(barragens$CLASSE)
 barragens$MINERIO_PRINCIPAL <- as.factor(barragens$MINERIO_PRINCIPAL)
 barragens$INSERIDA_NA_PNSB <- ifelse(barragens$INSERIDA_NA_PNSB == "Sim", TRUE, FALSE)
 ```
+
+Algumas análises exploratórias:
 
 ```{r}
 summary(barragens)
@@ -115,6 +123,8 @@ ggplot(data = barragens, aes(CATEGORIA_DE_RISCO, VOLUME_ATUAL_m3)) +
 ggplot(data = barragens, aes(CATEGORIA_DE_RISCO, ALTURA_ATUAL_metros)) +
   geom_point(color = "steelblue", size = 4, alpha = 1/3)
 ```
+
+Mapa de riscos:
 
 ```{r}
 pal <- colorFactor(palette = c("red", "yellow", "green", "gray"), 
