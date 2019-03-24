@@ -3,7 +3,7 @@ title: "Mapa de Risco das Barragens no Brasil"
 output: html_notebook
 ---
 
-Carregando pacoted necessários:
+Carregando pacotes necessários:
 
 ```{r}
 #install.packages("sp")
