@@ -10,6 +10,6 @@ sudo apt-get install libxml2-dev libcurl4-openssl-dev libssl-dev libgdal-dev lib
 ```
 O RStudio pode ser obtido [aqui](https://www.rstudio.com/products/rstudio/download/).
 
-Exemplo de mapa gerado:
+Categoria de risco x altura atual das barragens:
 
 ![Mapa de Riscos](mapa_riscos1.png)
